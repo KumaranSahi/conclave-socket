@@ -26,12 +26,8 @@ io.on("connection",(socket)=>{
             await conclave.save()
             await user.messages.push(message._id)
             await user.save()
-            socket.broadcast.to(conclaveId).emit("user-joined-to-conclave",{
-                id:userId,
-                name:user.name
-            })
             const newMessage=await conclave.execPopulate({path:'messages',populate:({path:'by'})})
-            io.emit("room-joined",{
+            io.in(conclaveId).emit("room-joined",{
                 ok:true,
                 messages:[...newMessage.messages],
             })
@@ -40,6 +36,33 @@ io.on("connection",(socket)=>{
                 ok:false,
                 message:"Room doesn't exist"
             })
+        }
+    })
+
+    socket.on("send-message",async ({content,conclaveId,userId})=>{
+        const conclave=await conclavesdb.findById(conclaveId)
+        const user=await usersdb.findById(userId)
+        if(conclave&&user){
+            const message=await messagesdb.create({
+                by:userId,
+                content:content,
+                conclave:conclaveId,
+                responseOf:null
+            })
+            await conclave.messages.push(message._id)
+            await conclave.save()
+            await user.messages.push(message._id)
+            await user.save()
+            const newMessage=await conclave.execPopulate({path:'messages',populate:({path:'by'})})
+            io.in(conclaveId).emit("room-joined",{
+                ok:true,
+                messages:[...newMessage.messages],
+            })
+        }else{
+            // io.emit("room-joined",{
+            //     ok:false,
+            //     message:"Room doesn't exist"
+            // })
         }
     })
 
