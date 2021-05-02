@@ -11,6 +11,8 @@ const UserSchema=new mongoose.Schema({
     },password:{
         type:String,
         required:true
+    },image:{
+        type:String
     },createdConclaves:[{
         type:mongoose.Schema.Types.ObjectId,
         ref:'conclave'

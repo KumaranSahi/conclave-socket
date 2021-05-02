@@ -6,6 +6,8 @@ const ConclaveSchema=new mongoose.Schema({
         required:true
     },description:{
         type:String
+    },image:{
+        type:String
     },messages:[{
         type:mongoose.Schema.Types.ObjectId,
         ref:'message'
