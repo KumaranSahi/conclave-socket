@@ -174,6 +174,16 @@ io.on("connection",(socket)=>{
         }
     })
 
+    socket.on("mute-user",async ({userId})=>{
+        const user=users.filter(({_id})=>_id.toString()===userId.toString())[0]
+        if(user){
+            io.to(user.socketId).emit("admin-muted-you",{
+                ok:true,
+                message:"You can't talk now"
+            })
+        }
+    })
+
     socket.on("close-conclave",async ({conclaveId})=>{
         try{
             await conclavesdb.findByIdAndUpdate(conclaveId,{active:false})
