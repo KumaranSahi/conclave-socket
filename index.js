@@ -173,4 +173,19 @@ io.on("connection",(socket)=>{
             })
         }
     })
+
+    socket.on("close-conclave",async ({conclaveId})=>{
+        try{
+            console.log(conclaveId)
+            await conclavesdb.findByIdAndUpdate(conclaveId,{active:false})
+            const conclaves=await conclavesdb.find()
+            io.in(conclaveId).emit("conclave-closed",{
+                ok:true,
+                conclaves:conclaves,
+                message:"You can talk now"
+            })
+        }catch(error){
+            console.log(error)
+        }
+    })
 })
