@@ -3,7 +3,7 @@ const conclavesdb=require('./model/Conclave.model')
 const usersdb=require('./model/User.model')
 const messagesdb=require('./model/Message.model')
 
-const io=require('socket.io')(8080,{
+const io=require('socket.io')(process.env.PORT ||8080,{
     cors:{
         origin:'*'
     }
