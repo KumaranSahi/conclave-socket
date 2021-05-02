@@ -12,14 +12,20 @@ const io=require('socket.io')(8080,{
 let users=[]
 
 const addUserToUsersList=(user,conclaveId,socketId)=>{
-    const newUser={
-        ...user.toObject(),
-        conclaveId:conclaveId,
-        socketId:socketId,
-        email: undefined,
-        password: undefined,
+    if(users.some(({_id})=>(_id.toString()==user.toObject()._id.toString()))){
+        users=users.map(item=>(item._id.toString()==user.toObject()._id.toString())?({
+            ...item,
+            socketId:socketId
+        }):item)
+    }else{
+        users.push({
+            ...user.toObject(),
+            conclaveId:conclaveId,
+            socketId:socketId,
+            email: undefined,
+            password: undefined,
+        })
     }
-    users.push(newUser)
 }
 
 const removeUserFromUserList=(id)=>{
@@ -115,14 +121,56 @@ io.on("connection",(socket)=>{
         }
     })
 
-    socket.on("leave-conclave",async ({userId})=>{
-        const conclaveId=users.filter(({_id})=>_id==userId)[0].conclaveId
-        socket.leave(conclaveId)
-        removeUserFromUserList(userId)
-        io.in(conclaveId).emit("user-left",{
-            ok:true,
-            users:[...users]
-        })
+    socket.on("raise-hand",async ({userId,conclaveAdminId})=>{
+        const user=users.filter(({_id})=>_id==userId)[0]
+        const conclaveAdmin=users.filter(({_id})=>_id==conclaveAdminId)[0]
+        if(conclaveAdmin){
+            io.to(conclaveAdmin.socketId).emit("user-raised-hand",{
+                ok:true,
+                user:user,
+                message:"The User has raised hand"
+            })
+        }else{
+            io.to(user.socketId).emit("admin-unavailable",{
+                ok:true,
+                message:"Seems like the admin is unavailable"
+            })
+        }
     })
 
+    socket.on("leave-conclave",async ({userId})=>{
+        try{
+            if(users.filter(({_id})=>_id==userId)[0]){
+                const conclaveId=users.filter(({_id})=>_id==userId)[0].conclaveId
+                socket.leave(conclaveId)
+                removeUserFromUserList(userId)
+                io.in(conclaveId).emit("user-left",{
+                    ok:true,
+                    users:[...users]
+                })
+            }
+        }catch(error){
+            console.log(error)
+        }
+    })
+
+    socket.on("accept-raised-hand",async ({userId})=>{
+        const user=users.filter(({_id})=>_id.toString()===userId.toString())[0]
+        if(user){
+            io.to(user.socketId).emit("raised-hand-accepted",{
+                ok:true,
+                message:"You can talk now"
+            })
+        }
+    })
+
+    socket.on("reject-raised-hand",async ({userId})=>{
+        const user=users.filter(({_id})=>_id.toString()===userId.toString())[0]
+        if(user){
+            io.to(user.socketId).emit("raised-hand-rejected",{
+                ok:true,
+                message:"You can't talk now"
+            })
+        }
+    })
 })
