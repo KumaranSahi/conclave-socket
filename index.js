@@ -26,7 +26,8 @@ io.on("connection",(socket)=>{
             await conclave.save()
             await user.messages.push(message._id)
             await user.save()
-            const newMessage=await conclave.execPopulate({path:'messages',populate:({path:'by'})})
+            const newMessage=await conclave.execPopulate({path:'messages',populate:([{path:'by'},{path:"responseOf",populate:({path:'by'})}])})
+
             io.in(conclaveId).emit("room-joined",{
                 ok:true,
                 messages:[...newMessage.messages],
@@ -53,16 +54,43 @@ io.on("connection",(socket)=>{
             await conclave.save()
             await user.messages.push(message._id)
             await user.save()
-            const newMessage=await conclave.execPopulate({path:'messages',populate:({path:'by'})})
+            const newMessage=await conclave.execPopulate({path:'messages',populate:([{path:'by'},{path:"responseOf",populate:({path:'by'})}])})
             io.in(conclaveId).emit("room-joined",{
                 ok:true,
                 messages:[...newMessage.messages],
             })
         }else{
-            // io.emit("room-joined",{
-            //     ok:false,
-            //     message:"Room doesn't exist"
-            // })
+            io.emit("room-joined",{
+                ok:false,
+                message:"Room doesn't exist"
+            })
+        }
+    })
+
+    socket.on("send-reply",async ({content,conclaveId,replyId,userId})=>{
+        const conclave=await conclavesdb.findById(conclaveId)
+        const user=await usersdb.findById(userId)
+        if(conclave&&user){
+            const message=await messagesdb.create({
+                by:userId,
+                content:content,
+                conclave:conclaveId,
+                responseOf:replyId
+            })
+            await conclave.messages.push(message._id)
+            await conclave.save()
+            await user.messages.push(message._id)
+            await user.save()
+            const newMessage=await conclave.execPopulate({path:'messages',populate:([{path:'by'},{path:"responseOf",populate:({path:'by'})}])})
+            io.in(conclaveId).emit("room-joined",{
+                ok:true,
+                messages:[...newMessage.messages],
+            })
+        }else{
+            io.emit("room-joined",{
+                ok:false,
+                message:"Room doesn't exist"
+            })
         }
     })
 
